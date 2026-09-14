@@ -1,0 +1,21 @@
+model Payment {
+    id                 String        @id @default(uuid())
+    amount             Int           @default(0)
+    userId             String
+    user               User          @relation(fields: [userId], references: [id])
+    transactionId      String        @unique
+    stripeEventId      String?       @unique
+    invoiceUrl         String?
+    status             PaymentStatus @default(PENDING)
+    paymentGatewayData Json?
+    createdAt          DateTime      @default(now())
+    updatedAt          DateTime      @updatedAt
+
+    @@map("payment")
+}
+
+enum PaymentStatus {
+    SUCCESS
+    FAILED
+    PENDING
+}

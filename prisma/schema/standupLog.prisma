@@ -1,0 +1,29 @@
+model StandupLogs{
+    id          String   @id @default(uuid())
+    workspaceId String?
+    workSpace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+    userId      String 
+    user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    todayWork  String
+    tomorrowWork  String
+    blocker     String?
+    blockerUrl  String[]
+    blockerStatus  BlockerStatus?
+    blockerResolvedAt DateTime?
+    blockerResolvedBy String? //adminId only
+    projectTags  String[]
+
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@map("standup_logs")
+  
+}
+
+enum BlockerStatus{
+    OPEN
+    RESOLVED
+}

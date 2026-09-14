@@ -1,0 +1,101 @@
+import express from "express";
+import http from "http";
+import cors from "cors";
+import dotenv from "dotenv";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "../lib/auth";
+import { indexRoutes } from "./routes/router";
+import cookieParser from "cookie-parser";
+import { globalErrorHandler } from "./middleware/globalErrorHandler";
+import { notFound } from "./middleware/notFound";
+import cron from "node-cron";
+import { inviteServices } from "./module/invite/invite.services";
+import path from "path";
+import { StandupLogServices } from "./module/standupLogs/standupLogs.services";
+import { prisma } from "../lib/prisma";
+import { sendEmail } from "./utils/sendEmail";
+import { getWeekRange } from "./utils/getWeekRange";
+
+import { paymentController } from "./module/payment/payment.controller";
+import { envVars } from "./config/env";
+import { PLAN } from "../generated/prisma/enums";
+import { initSocket } from "./utils/socket";
+
+dotenv.config();
+
+const app = express();
+const server = http.createServer(app);
+
+const io = initSocket(server, {
+  origin: [envVars.FRONTEND_URL || "http://localhost:3000"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+});
+
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.handleStripeWebhook,
+);
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+app.set("view engine", "ejs");
+app.set("views", path.resolve(process.cwd(), "src/app/templates"));
+
+app.use(
+  cors({
+    origin: [envVars.FRONTEND_URL || "http://localhost:3000"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+
+app.use("/api/auth", toNodeHandler(auth));
+
+cron.schedule("0 0 * * *", async () => {
+  await inviteServices.updateExpiredTokens();
+});
+
+cron.schedule("*/10 * * * *", async () => {
+  try {
+    await fetch("https://devlog-backend-a8sc.onrender.com/health");
+  } catch (error) {
+    console.error("Error occurred while fetching health check endpoint:", error);
+  }
+});
+
+app.get("/health", async (req, res) => {
+  res.status(200).json({
+    message: "ok",
+    success: true,
+  });
+});
+
+io.on("connection", (socket) => {
+  socket.on("join_workspace", (workspaceId: string) => {
+    socket.join(workspaceId);
+    // console.log(`user ${socket.id} joined workspace ${workspaceId}`);
+  });
+
+  socket.on("leave_workspace", (workspaceId: string) => {
+    socket.leave(workspaceId);
+    // console.log(`user ${socket.id} left workspace ${workspaceId}`);
+  });
+
+  socket.on("disconnect", () => {
+    // console.log("user disconnected", socket.id);
+  });
+});
+
+app.use("/api/v1", indexRoutes);
+
+app.use(globalErrorHandler);
+app.use(notFound);
+
+export { app, server };
+export default app;

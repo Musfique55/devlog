@@ -1,0 +1,23 @@
+model Invite {
+    id String @id @default(uuid())
+    email String 
+    token String @unique
+    workspaceId String
+    workspace Workspace @relation(fields: [workspaceId], references: [id],onDelete: Cascade)
+
+    status  InviteStatus @default(PENDING)
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("invite")
+}
+
+enum InviteStatus {
+    PENDING
+    ACCEPTED
+    EXPIRED
+}
+
+
+
