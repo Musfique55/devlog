@@ -67,7 +67,7 @@ cron.schedule("0 0 * * *", async () => {
 
 cron.schedule("*/10 * * * *", async () => {
   try {
-    await fetch("https://devlog-backend-a8sc.onrender.com/health");
+    await fetch("https://devlog-sxig.onrender.com/health");
   } catch (error) {
     console.error("Error occurred while fetching health check endpoint:", error);
   }

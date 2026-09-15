@@ -369,6 +369,6 @@ CVC         : Any 3 digits
 <div align="center">
   <p>
     <a href="https://github.com/Musfique55/devlog-frontend">Frontend Repo</a> •
-    <a href="https://devlog-backend-a8sc.onrender.com/health">Live API</a>
+    <a href="https://devlog-sxig.onrender.com/health">Live API</a>
   </p>
 </div>
