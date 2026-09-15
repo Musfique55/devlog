@@ -1,0 +1,1397 @@
+openapi: 3.0.3
+info:
+  title: DevLog API
+  description: |
+    REST API for the DevLog standup tracker.
+
+    Authorization has two levels:
+    - App-level role: USER or SUPER_ADMIN. Enforced by checkAuth.
+    - Workspace-level role: MEMBER or ADMIN. Enforced by teamAuth for workspace resources.
+    SUPER_ADMIN bypasses workspace-level membership checks.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+  - url: https://devlog-backend-a8sc.onrender.com
+    description: Production server
+
+tags:
+  - name: System
+  - name: Auth
+  - name: Users
+  - name: Workspaces
+  - name: Logs
+  - name: Invites
+  - name: Dashboard
+  - name: Payments
+  - name: Admin
+
+x-authorization:
+  appRoles:
+    USER: Standard authenticated user.
+    SUPER_ADMIN: Application administrator. This role bypasses workspace membership checks.
+  workspaceRoles:
+    MEMBER: Workspace member. Can access member-level workspace resources.
+    ADMIN: Workspace administrator. Can manage workspace members and administrator-only resources.
+  enforcement:
+    - middleware: checkAuth
+      level: app
+      values: [USER, SUPER_ADMIN]
+    - middleware: teamAuth
+      level: workspace
+      values: [MEMBER, ADMIN]
+  routeRules:
+    - path: /api/v1/admin/*
+      appRoles: [SUPER_ADMIN]
+    - path: /api/v1/workspaces/{workspaceId}/members
+      appRoles: [USER, SUPER_ADMIN]
+      workspaceRoles: [MEMBER, ADMIN]
+    - path: /api/v1/workspaces/{workspaceId}
+      appRoles: [USER, SUPER_ADMIN]
+      workspaceRoles: [MEMBER, ADMIN]
+    - path: /api/v1/workspaces/{workspaceId}/stats
+      appRoles: [USER, SUPER_ADMIN]
+      workspaceRoles: [ADMIN]
+    - path: /api/v1/workspaces/{workspaceId}/invite
+      appRoles: [USER]
+      workspaceRoles: [ADMIN]
+    - path: /api/v1/workspaces/{workspaceId}/remove-member
+      appRoles: [USER]
+      workspaceRoles: [ADMIN]
+    - path: /api/v1/dashboard/workspaces/{workspaceId}
+      appRoles: [USER]
+      workspaceRoles: [MEMBER, ADMIN]
+    - path: /api/v1/logs/workspaces/{workspaceId}
+      appRoles: [USER]
+      workspaceRoles: [MEMBER, ADMIN]
+    - path: /api/v1/logs/workspaces/{workspaceId}/blocker/{blocker}
+      appRoles: [USER]
+      workspaceRoles: [ADMIN]
+    - path: /api/v1/logs/workspaces/{workspaceId}/blocker/{id}
+      appRoles: [USER]
+      workspaceRoles: [ADMIN]
+    - path: /api/v1/logs/workspaces/{workspaceId}/{id}
+      appRoles: [USER]
+      workspaceRoles: [ADMIN]
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /webhook:
+    post:
+      tags: [Payments]
+      summary: Receive Stripe webhook events
+      operationId: stripeWebhook
+      parameters:
+        - $ref: '#/components/parameters/StripeSignature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw Stripe event payload.
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/docs:
+    get:
+      tags: [System]
+      summary: OpenAPI documentation
+      operationId: getApiDocs
+      responses:
+        '200':
+          description: Swagger UI documentation page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /api/auth/{authPath}:
+    get:
+      tags: [Auth]
+      summary: Better Auth endpoint
+      description: Handles Better Auth GET operations. Available operations depend on the Better Auth configuration.
+      operationId: betterAuthGet
+      parameters:
+        - name: authPath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Better Auth route path.
+      responses:
+        '200':
+          description: Better Auth response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Auth]
+      summary: Better Auth endpoint
+      description: Handles Better Auth POST operations. Available operations depend on the Better Auth configuration.
+      operationId: betterAuthPost
+      parameters:
+        - name: authPath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Better Auth route path.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Better Auth response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in a user
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: User logged in; authentication cookies are set.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a user
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered; authentication cookies are set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/auth/refresh-token:
+    post:
+      tags: [Auth]
+      summary: Refresh authentication tokens
+      operationId: refreshToken
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: New tokens generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out the current user
+      operationId: logout
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: User logged out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/users/me:
+    get:
+      tags: [Users]
+      summary: Get the current user
+      operationId: getCurrentUser
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/users:
+    patch:
+      tags: [Users]
+      summary: Update the current profile
+      operationId: updateProfile
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/users/delete-account:
+    delete:
+      tags: [Users]
+      summary: Delete the current account
+      operationId: deleteAccount
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workspaces:
+    post:
+      tags: [Workspaces]
+      summary: Create a workspace
+      operationId: createWorkspace
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '201':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workspaces/me:
+    get:
+      tags: [Workspaces]
+      summary: List the current user's workspaces
+      operationId: getMyWorkspaces
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SearchTerm'
+      responses:
+        '200':
+          description: Workspaces
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workspaces/me/stats:
+    get:
+      tags: [Workspaces]
+      summary: Get the current user's workspace statistics
+      operationId: getMyWorkspaceStats
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Workspace statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workspaces/{workspaceId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+    get:
+      tags: [Workspaces]
+      summary: Get a workspace
+      operationId: getWorkspace
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [Workspaces]
+      summary: Update a workspace
+      operationId: updateWorkspace
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkspaceRequest'
+      responses:
+        '200':
+          description: Workspace updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Workspaces]
+      summary: Delete a workspace
+      operationId: deleteWorkspace
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Workspace deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/workspaces/{workspaceId}/members:
+    get:
+      tags: [Workspaces]
+      summary: List workspace members
+      operationId: listWorkspaceMembers
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SearchTerm'
+      responses:
+        '200':
+          description: Workspace members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/workspaces/{workspaceId}/stats:
+    get:
+      tags: [Workspaces]
+      summary: Get workspace statistics
+      operationId: getWorkspaceStats
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: Workspace statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/workspaces/{workspaceId}/invite:
+    post:
+      tags: [Workspaces]
+      summary: Invite a member to a workspace
+      operationId: inviteWorkspaceMember
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/workspaces/{workspaceId}/remove-member:
+    delete:
+      tags: [Workspaces]
+      summary: Remove a member from a workspace
+      operationId: removeWorkspaceMember
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId]
+              properties:
+                memberId:
+                  type: string
+      responses:
+        '200':
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/logs:
+    get:
+      tags: [Logs]
+      summary: List the current user's standup logs
+      operationId: listLogs
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SearchTerm'
+      responses:
+        '200':
+          description: Standup logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Logs]
+      summary: Create a standup log
+      operationId: createLog
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateLogRequest'
+      responses:
+        '201':
+          description: Log created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/logs/{id}:
+    parameters:
+      - $ref: '#/components/parameters/LogId'
+    get:
+      tags: [Logs]
+      summary: Get a standup log
+      operationId: getLog
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Standup log
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [Logs]
+      summary: Update a standup log
+      operationId: updateLog
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLogRequest'
+      responses:
+        '200':
+          description: Log updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Logs]
+      summary: Delete a standup log
+      operationId: deleteLog
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Log deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/logs/workspaces/{workspaceId}:
+    get:
+      tags: [Logs]
+      summary: List logs for a workspace
+      operationId: listWorkspaceLogs
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SearchTerm'
+      responses:
+        '200':
+          description: Workspace logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/logs/workspaces/{workspaceId}/blocker/{blocker}:
+    get:
+      tags: [Logs]
+      summary: List blocker logs for a workspace
+      operationId: listBlockerLogs
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: blocker
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Blocker text, with spaces represented as hyphens.
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Blocker logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/logs/workspaces/{workspaceId}/blocker/{id}:
+    patch:
+      tags: [Logs]
+      summary: Update blocker status
+      operationId: updateBlockerStatus
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/LogId'
+      responses:
+        '200':
+          description: Blocker status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/logs/workspaces/{workspaceId}/{id}:
+    delete:
+      tags: [Logs]
+      summary: Delete a workspace log
+      operationId: deleteWorkspaceLog
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/LogId'
+      responses:
+        '200':
+          description: Log deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/invites/accept/{token}:
+    get:
+      tags: [Invites]
+      summary: Accept a workspace invitation
+      operationId: acceptInvite
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/dashboard/me:
+    get:
+      tags: [Dashboard]
+      summary: Get the current user's dashboard
+      operationId: getMyDashboard
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/dashboard/workspaces/{workspaceId}:
+    get:
+      tags: [Dashboard]
+      summary: Get a workspace dashboard
+      operationId: getWorkspaceDashboard
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/payments:
+    get:
+      tags: [Payments]
+      summary: Get payment history
+      operationId: getPaymentHistory
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Payment history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/payments/{transactionId}:
+    get:
+      tags: [Payments]
+      summary: Check payment status
+      operationId: checkPaymentStatus
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/payments/create-checkout-session:
+    post:
+      tags: [Payments]
+      summary: Create a Stripe checkout session
+      operationId: createCheckoutSession
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '201':
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/payments/cancel-subscription:
+    patch:
+      tags: [Payments]
+      summary: Cancel the current subscription
+      operationId: cancelSubscription
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Subscription cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Get the admin dashboard
+      operationId: getAdminDashboard
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Admin dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/admin/dashboard/yearly-profit:
+    get:
+      tags: [Admin]
+      summary: Get yearly profit
+      operationId: getYearlyProfit
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: Yearly profit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/admin/dashboard/user-growth:
+    get:
+      tags: [Admin]
+      summary: Get user growth statistics
+      operationId: getUserGrowth
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      responses:
+        '200':
+          description: User growth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/admin/workspaces:
+    get:
+      tags: [Admin]
+      summary: List all workspaces
+      operationId: listAllWorkspaces
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SearchTerm'
+      responses:
+        '200':
+          description: All workspaces
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users
+      operationId: listAllUsers
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SearchTerm'
+      responses:
+        '200':
+          description: All users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/admin/users/{userId}:
+    patch:
+      tags: [Admin]
+      summary: Update user activity status
+      operationId: updateUserActivityStatus
+      security:
+        - sessionCookie: []
+          accessTokenCookie: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+      description: Better Auth session cookie. Use __Secure-better-auth.session_token over HTTPS.
+    accessTokenCookie:
+      type: apiKey
+      in: cookie
+      name: accessToken
+      description: JWT access token cookie.
+
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        type: string
+    LogId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 10
+    SearchTerm:
+      name: searchTerm
+      in: query
+      schema:
+        type: string
+    StripeSignature:
+      name: stripe-signature
+      in: header
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          format: password
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          format: password
+        inviteToken:
+          type: string
+    CreateWorkspaceRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 20
+    UpdateWorkspaceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 20
+        isActive:
+          type: boolean
+        isDeleted:
+          type: boolean
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        image:
+          type: string
+          format: uri
+        file:
+          type: string
+          format: binary
+    UpdateUserRequest:
+      type: object
+      properties:
+        isBlocked:
+          type: boolean
+        blockedReason:
+          type: string
+        isDeleted:
+          type: boolean
+    CreateLogRequest:
+      type: object
+      required: [todayWork, tomorrowWork]
+      properties:
+        todayWork:
+          type: string
+        tomorrowWork:
+          type: string
+        blocker:
+          type: string
+        projectTags:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+        workspaceId:
+          type: string
+        blockerUrl:
+          type: array
+          items:
+            type: string
+            format: uri
+        files:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+            format: binary
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        emailVerified:
+          type: boolean
+        image:
+          type: string
+          nullable: true
+        role:
+          $ref: '#/components/schemas/AppRole'
+        plan:
+          type: string
+          enum: [FREE, PRO]
+        isBlocked:
+          type: boolean
+        isDeleted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AppRole:
+      type: string
+      description: Application-level authorization role.
+      enum: [USER, SUPER_ADMIN]
+    WorkspaceRole:
+      type: string
+      description: Workspace-level authorization role.
+      enum: [MEMBER, ADMIN]
+    WorkspaceMember:
+      type: object
+      properties:
+        userId:
+          type: string
+        workspaceId:
+          type: string
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        adminId:
+          type: string
+        isActive:
+          type: boolean
+        isDeleted:
+          type: boolean
+    StandupLog:
+      type: object
+      properties:
+        id:
+          type: string
+        todayWork:
+          type: string
+        tomorrowWork:
+          type: string
+        blocker:
+          type: string
+          nullable: true
+        blockerStatus:
+          type: string
+          nullable: true
+        projectTags:
+          type: array
+          items:
+            type: string
+        workspaceId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ResponseMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+    SuccessResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        success:
+          type: boolean
+        data:
+          nullable: true
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+        redirect:
+          type: string
+          format: uri
+    AuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              additionalProperties: true
+    UserResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/User'
+    WorkspaceResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Workspace'
+    LogResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/StandupLog'
+    PaginatedResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {}
+            meta:
+              $ref: '#/components/schemas/ResponseMeta'
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        success:
+          type: boolean
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              message:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication required or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
