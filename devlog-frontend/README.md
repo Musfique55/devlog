@@ -190,9 +190,10 @@ src/
 └── env.ts                             # Runtime environment 
 ```
 ---
+
 <div align="center">
   <p>
     <a href="https://github.com/Musfique55/devlog-backend">Backend Repo</a> •
-    <a href="[https://devlog-frontend-two.vercel.app/](https://devlog-backend-a8sc.onrender.com/)">Live Demo</a>
+    <a href="https://devlog-frontend-two.vercel.app">Website</a>
   </p>
 </div>
