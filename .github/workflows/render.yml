@@ -1,0 +1,10 @@
+name: keepAlive render
+on: 
+ schedule:
+  - cron: "*/10 * * * *"  
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Server
+      run: curl -s https://devlog-sxig.onrender.com/health
