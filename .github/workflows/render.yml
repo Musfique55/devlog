@@ -7,4 +7,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Render Server
-      run: curl -s https://devlog-sxig.onrender.com/health
+        run: curl -s https://devlog-sxig.onrender.com/health
