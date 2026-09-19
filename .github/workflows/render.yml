@@ -1,5 +1,6 @@
 name: keepAlive render
 on: 
+ workflow_dispatch: 
  schedule:
   - cron: "*/10 * * * *"  
 jobs:
@@ -7,4 +8,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Render Server
-        run: curl -s https://devlog-sxig.onrender.com/health
+        run: curl -s --connect-timeout 30 --max-time 60 --retry 3 https://devlog-sxig.onrender.com/health
