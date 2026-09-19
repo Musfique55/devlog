@@ -2,7 +2,7 @@
 
 import { envVars } from "@/env";
 import { deleteCookie } from "@/lib/cookieUtils";
-import fetchWithAuthServer, { getCookieHeader } from "@/lib/fetchWithAuth";
+import fetchWithAuthServer from "@/lib/fetchWithAuth";
 import { setTokenInCookie } from "@/lib/tokenUtils";
 
 export const getNewRefreshToken = async (): Promise<{

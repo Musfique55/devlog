@@ -29,7 +29,7 @@ const swaggerDocument = YAML.load(
 const app = express();
 const server = http.createServer(app);
 
-const io = initSocket(server, {
+export const io = initSocket(server, {
   origin: [envVars.FRONTEND_URL || "http://localhost:3000"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -65,13 +65,6 @@ cron.schedule("0 0 * * *", async () => {
   await inviteServices.updateExpiredTokens();
 });
 
-cron.schedule("*/10 * * * *", async () => {
-  try {
-    await fetch("https://devlog-sxig.onrender.com/health");
-  } catch (error) {
-    console.error("Error occurred while fetching health check endpoint:", error);
-  }
-});
 
 app.get("/health", async (req, res) => {
   res.status(200).json({
