@@ -96,8 +96,8 @@ const getAllWorkSpaces = catchAsync(async (req: Request, res: Response) => {
     });
   }
   const data = await workspaceService.getWorkSpacesByUserId(
-    req.query as IQueryParams,
     id,
+    req.query as IQueryParams,
   );
   sendResponse(res, {
     statusCode: status.OK,
@@ -111,8 +111,8 @@ const getWorkspacesByUserId = catchAsync(
   async (req: Request, res: Response) => {
     const id = req.user!.id;
     const result = await workspaceService.getWorkSpacesByUserId(
-      req.query as IQueryParams,
       id,
+      req.query as IQueryParams,
     );
     sendResponse(res, {
       message: "users workspace fetched successfully",

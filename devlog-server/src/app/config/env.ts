@@ -8,6 +8,7 @@ interface envVars {
   JWT_SECRET: string;
   ACCESS_TOKEN_EXPIRES_IN: string;
   REFRESH_TOKEN_EXPIRES_IN: string;
+  REDIS_URL: string;
   ADMIN: {
     ADMIN_USERNAME: string;
     ADMIN_EMAIL: string;
@@ -49,6 +50,7 @@ const loadEnvs = () => {
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
     "STRIPE_PRICE_ID",
+    "REDIS_URL",
   ];
 
   envs.forEach((env) => {
@@ -67,6 +69,7 @@ const loadEnvs = () => {
     ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN as string,
     REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN as string,
     JWT_SECRET: process.env.JWT_SECRET as string,
+    REDIS_URL: process.env.REDIS_URL as string,
     ADMIN: {
       ADMIN_USERNAME: process.env.ADMIN_USERNAME as string,
       ADMIN_EMAIL: process.env.ADMIN_EMAIL as string,

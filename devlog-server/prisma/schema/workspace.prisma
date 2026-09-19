@@ -12,6 +12,7 @@ model Workspace {
     members WorkspaceMember[]
     invites Invite[]
     logs    StandupLogs[]
+    notifications Notification[]
 
     @@index([adminId])
     @@map("workspace")

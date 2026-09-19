@@ -30,6 +30,7 @@ model User {
   standupLogs      StandupLogs[]
   payments         Payment[]
   subscriptions    Subscription[]
+  notifications     Notification[]
 
   @@unique([email])
   @@map("user")

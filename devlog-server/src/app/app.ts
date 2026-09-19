@@ -73,21 +73,6 @@ app.get("/health", async (req, res) => {
   });
 });
 
-io.on("connection", (socket) => {
-  socket.on("join_workspace", (workspaceId: string) => {
-    socket.join(workspaceId);
-    // console.log(`user ${socket.id} joined workspace ${workspaceId}`);
-  });
-
-  socket.on("leave_workspace", (workspaceId: string) => {
-    socket.leave(workspaceId);
-    // console.log(`user ${socket.id} left workspace ${workspaceId}`);
-  });
-
-  socket.on("disconnect", () => {
-    // console.log("user disconnected", socket.id);
-  });
-});
 
 app.use("/api/v1", indexRoutes);
 

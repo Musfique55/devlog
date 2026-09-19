@@ -157,29 +157,28 @@ const getWorkSpaceById = async (workspaceId: string, user: IRequestUser) => {
 };
 
 const getWorkspaceMembers = async (id: string, query: IQueryParams) => {
-  const additionalFilters : Prisma.WorkspaceMemberWhereInput[] = [];
+  const additionalFilters: Prisma.WorkspaceMemberWhereInput[] = [];
 
   if (query?.searchTerm) {
     additionalFilters.push(
       {
-      user: {
-        name: {
-          contains: query.searchTerm,
-          mode: "insensitive",
+        user: {
+          name: {
+            contains: query.searchTerm,
+            mode: "insensitive",
+          },
         },
       },
-    },
-    {
-      user: {
-        email: {
-          contains: query.searchTerm,
-          mode: "insensitive",
+      {
+        user: {
+          email: {
+            contains: query.searchTerm,
+            mode: "insensitive",
+          },
         },
       },
-    },
-  );
+    );
   }
-
 
   try {
     const result = await prisma.workspaceMember.findMany({
@@ -189,7 +188,7 @@ const getWorkspaceMembers = async (id: string, query: IQueryParams) => {
           isDeleted: false,
           isActive: true,
         },
-        ...(additionalFilters.length > 0 && {OR :  additionalFilters}),
+        ...(additionalFilters.length > 0 && { OR: additionalFilters }),
       },
       include: {
         user: {
@@ -200,10 +199,9 @@ const getWorkspaceMembers = async (id: string, query: IQueryParams) => {
             image: true,
           },
         },
-
       },
-      omit : {
-        userId : true
+      omit: {
+        userId: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -244,7 +242,9 @@ const getAllWorkSpaces = async (query: IQueryParams) => {
       prisma.workspace.findMany({
         where: {
           AND: {
-            ...(query.isActive && {isActive: query.isActive === "true" ? true : false}),
+            ...(query.isActive && {
+              isActive: query.isActive === "true" ? true : false,
+            }),
             ...(additionalFilter.length > 0 && { OR: additionalFilter }),
           },
         },
@@ -309,73 +309,73 @@ const getAllWorkSpaces = async (query: IQueryParams) => {
   }
 };
 
-const getWorkspaceStats = async(workspaceId : string) => {
+const getWorkspaceStats = async (workspaceId: string) => {
   try {
-    const [totalLogs, totalBlockers,lastSevenDaysLogs,totalMembers] = await Promise.all([
-      prisma.standupLogs.aggregate({
-        where : {
-          workspaceId,
-          workSpace : {
-            isDeleted : false,
-            isActive : true
-          }
-        },
-        _count : {
-          id : true
-        }
-      }),
-      prisma.standupLogs.aggregate({
-        where : {
-           workspaceId,
-          blockerStatus : BlockerStatus.OPEN,
-          workSpace : {
-            isDeleted : false,
-            isActive : true
-          }
-        },
-        _count : {
-          blocker : true
-        }
-      }),
-      prisma.standupLogs.aggregate({
-        where : {
-          workspaceId,
-          createdAt : {
-            gte : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          }
-        },
-        _count : {
-          id : true
-        }
-      }),
-      prisma.workspaceMember.aggregate({
-        where : {
-          workspaceId,
-          role : TEAM_ROLE.MEMBER
-        },
-        _count : {
-          id : true
-        }
-      })
-    ]);
+    const [totalLogs, totalBlockers, lastSevenDaysLogs, totalMembers] =
+      await Promise.all([
+        prisma.standupLogs.aggregate({
+          where: {
+            workspaceId,
+            workSpace: {
+              isDeleted: false,
+              isActive: true,
+            },
+          },
+          _count: {
+            id: true,
+          },
+        }),
+        prisma.standupLogs.aggregate({
+          where: {
+            workspaceId,
+            blockerStatus: BlockerStatus.OPEN,
+            workSpace: {
+              isDeleted: false,
+              isActive: true,
+            },
+          },
+          _count: {
+            blocker: true,
+          },
+        }),
+        prisma.standupLogs.aggregate({
+          where: {
+            workspaceId,
+            createdAt: {
+              gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            },
+          },
+          _count: {
+            id: true,
+          },
+        }),
+        prisma.workspaceMember.aggregate({
+          where: {
+            workspaceId,
+            role: TEAM_ROLE.MEMBER,
+          },
+          _count: {
+            id: true,
+          },
+        }),
+      ]);
 
     const workingDays = 5;
     const potentialCompletion = totalMembers._count.id * workingDays;
     const actualLogs = lastSevenDaysLogs._count.id;
     const complianceRate = (actualLogs / potentialCompletion) * 100;
 
-    return{
-      totalLogs : totalLogs._count.id,
-      totalBlockers : totalBlockers._count.blocker,
-      complianceRate : Math.min(complianceRate,100)
-    }
-    
+    return {
+      totalLogs: totalLogs._count.id,
+      totalBlockers: totalBlockers._count.blocker,
+      complianceRate: Math.min(complianceRate, 100),
+    };
   } catch (error) {
     throw error;
   }
-}
+};
 
-const getWorkSpacesByUserId = async (query: IQueryParams, userId: string) => {
+const getWorkSpacesByUserId = async (userId: string, query?: IQueryParams) => {
   try {
     const [data, count] = await Promise.all([
       prisma.workspace.findMany({
@@ -408,8 +408,8 @@ const getWorkSpacesByUserId = async (query: IQueryParams, userId: string) => {
             },
           },
         },
-        take: Number(query.limit) || 10,
-        skip: (Number(query.page) || 1 - 1) * (Number(query.limit) || 10),
+        take: Number(query?.limit) || 10,
+        skip: (Number(query?.page) || 1 - 1) * (Number(query?.limit) || 10),
         orderBy: {
           createdAt: "desc",
         },
@@ -435,9 +435,9 @@ const getWorkSpacesByUserId = async (query: IQueryParams, userId: string) => {
       data,
       meta: {
         total: count,
-        page: Number(query.page) || 1,
-        limit: Number(query.limit) || 10,
-        totalPages: Math.ceil(count / Number(query.limit || 10)) || 1,
+        page: Number(query?.page) || 1,
+        limit: Number(query?.limit) || 10,
+        totalPages: Math.ceil(count / Number(query?.limit || 10)) || 1,
       },
     };
   } catch (error) {
@@ -565,39 +565,42 @@ const updateWorkSpace = async (
   }
 };
 
-const removeMemberFromWorkspace = async(workspaceId : string,memberId : string) => {
+const removeMemberFromWorkspace = async (
+  workspaceId: string,
+  memberId: string,
+) => {
   try {
     const member = await prisma.workspaceMember.findUnique({
-      where : {
-        workspaceId_userId : {
+      where: {
+        workspaceId_userId: {
           workspaceId,
-          userId : memberId
-        }
-      }
+          userId: memberId,
+        },
+      },
     });
 
-    if(!member){
-      throw new AppError("member not found",status.NOT_FOUND);
+    if (!member) {
+      throw new AppError("member not found", status.NOT_FOUND);
     }
 
-    if(member.role === TEAM_ROLE.ADMIN){
-      throw new AppError("admin cannot be removed",status.BAD_REQUEST);
+    if (member.role === TEAM_ROLE.ADMIN) {
+      throw new AppError("admin cannot be removed", status.BAD_REQUEST);
     }
 
-   const res = await prisma.workspaceMember.delete({
-      where : {
-        workspaceId_userId : {
+    const res = await prisma.workspaceMember.delete({
+      where: {
+        workspaceId_userId: {
           workspaceId,
-          userId : memberId
-        }
-      }
+          userId: memberId,
+        },
+      },
     });
 
     return res;
   } catch (error) {
     throw error;
   }
-}
+};
 
 export const workspaceService = {
   createWorkspace,

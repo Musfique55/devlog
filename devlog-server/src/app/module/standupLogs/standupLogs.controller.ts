@@ -5,6 +5,7 @@ import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { IQueryParams } from "../../types/queryBuilder.types";
 import { IRequestUser } from "../../middleware/checkAuth";
+import { IResolveBlocker } from "./standupLogs.types";
 
 const createLog = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.id;
@@ -121,10 +122,12 @@ const getAllBlockerLogs = catchAsync(async (req: Request, res: Response) => {
 
 const updateBlockerStatus = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const admin = req.user;
+  const user = req.user;
+  const payload = req.body;
   const result = await StandupLogServices.updateBlockerStatus(
     id as string,
-    admin as IRequestUser,
+    user as IRequestUser,
+    payload as IResolveBlocker,
   );
   sendResponse(res, {
     statusCode: status.OK,

@@ -1,6 +1,6 @@
 import z from "zod";
 
- const createLogSchema = (plan : "FREE" | "PRO") => {
+const createLogSchema = (plan: "FREE" | "PRO") => {
   return z
     .object({
       todayWork: z.string().min(1),
@@ -10,22 +10,29 @@ import z from "zod";
       workspaceId: z.string().optional(),
       blockerUrl: z.array(z.string()).optional(),
     })
-    .refine((data) => {
-        if(plan === "FREE"){
-            // free users : max 2 tags
-            return (data.projectTags?.length ?? 0) <= 2;
-        }else{
-            // pro users : max 5 tags
-            return (data.projectTags?.length ?? 0) <= 5;
+    .refine(
+      (data) => {
+        if (plan === "FREE") {
+          // free users : max 2 tags
+          return (data.projectTags?.length ?? 0) <= 2;
+        } else {
+          // pro users : max 5 tags
+          return (data.projectTags?.length ?? 0) <= 5;
         }
-    },
-    {
-        message : "Free users can have max 2 tags and Pro users can have max 5 tags",
-        path : ["projectTags"]
-    }
-);
+      },
+      {
+        message:
+          "Free users can have max 2 tags and Pro users can have max 5 tags",
+        path: ["projectTags"],
+      },
+    );
 };
 
+const resolveBlockerSchema = z.object({
+  comment: z.string().optional(),
+});
+
 export const logValidator = {
-    createLogSchema
-}
+  createLogSchema,
+  resolveBlockerSchema,
+};
