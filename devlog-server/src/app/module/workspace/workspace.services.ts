@@ -13,6 +13,7 @@ import { QueryBuilder } from "../../utils/queryBuilder";
 import { IQueryParams } from "../../types/queryBuilder.types";
 import { WorkspaceFindManyArgs } from "../../../generated/prisma/models";
 import { IRequestUser } from "../../middleware/checkAuth";
+import redis from "../../config/redis";
 
 const createWorkspace = async (name: string, userId: string) => {
   try {
@@ -37,6 +38,8 @@ const createWorkspace = async (name: string, userId: string) => {
           role: TEAM_ROLE.ADMIN,
         },
       });
+
+      await redis.sadd(`notifications:${userId}:workspace`)
 
       return workspace;
     });

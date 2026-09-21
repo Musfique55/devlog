@@ -48,12 +48,25 @@ export const checkAuth = (...roles: APP_ROLE[]) => {
       );
     }
 
+
     const session = await prisma.session.findFirstOrThrow({
       where: {
         token: sessionToken,
       },
       include: {
-        user: true,
+        user: {
+          select : {
+            isBlocked : true,
+            isDeleted : true,
+            emailVerified : true,
+            id : true,
+            email : true,
+            stripeCustomerId : true,
+            plan : true,
+            role : true,
+            name : true
+          }
+        },
       },
     });
 

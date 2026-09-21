@@ -41,7 +41,7 @@ export function RegisterForm({ inviteToken }: { inviteToken?: string }) {
         toast.success("Account Created Successfully");
         form.reset();
         setServerError(null);
-        // router.push(`/auth/verify-email-notice?email=${value.email}`)
+        router.push(`/auth/verify-email-notice?email=${value.email}`)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         setServerError(error.message!);

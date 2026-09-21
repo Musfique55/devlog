@@ -6,13 +6,12 @@ export const createNotificationDTO = z
     workspaceId: z.string().nullable().optional(),
     message: z.string().min(1, "Message is required"),
     type: z.enum(notificationType),
-    recipientId: z.string().nullable().optional(),
+    recipientId: z.string(),
     actorId: z.string().nullable().optional(),
   })
   .superRefine((data, ctx) => {
     if (
-      data.type === notificationType.ANNOUNCEMENT ||
-      data.type === notificationType.BLOCKER_UPDATED
+      data.type === notificationType.ANNOUNCEMENT
     ) {
       if (!data.workspaceId) {
         ctx.addIssue({

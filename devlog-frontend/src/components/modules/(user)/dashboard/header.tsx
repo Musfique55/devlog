@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useSocket } from "@/providers/SocketProvider";
+import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   title?: string;
@@ -26,7 +27,7 @@ export function Header({ title = "Dashboard" }: HeaderProps) {
     },
   });
 
-  const { notifications, unreadCount, markAllAsRead, clearNotifications } =
+  const { notifications, markAllAsRead, clearNotifications, newNotifications } =
     useSocket();
 
   return (
@@ -48,15 +49,26 @@ export function Header({ title = "Dashboard" }: HeaderProps) {
         </button>
         <Popover>
           <PopoverTrigger asChild>
-            <button
-              onClick={markAllAsRead}
-              className="relative text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full border-2 border-zinc-950 animate-pulse"></span>
-              )}
-            </button>
+            {newNotifications ? (
+              <Button
+                onClick={markAllAsRead}
+                variant="ghost"
+                size="icon"
+                className="text-white h-8 w-8 sm:h-10 sm:w-10 relative"
+              >
+                <div className="h-2 w-2 bg-red-500 rounded-full absolute top-2 right-2" />
+                <Bell className="w-4 sm:w-5 h-4 sm:h-5" />
+              </Button>
+            ) : (
+              <Button
+                onClick={markAllAsRead}
+                variant="ghost"
+                size="icon"
+                className="text-zinc-400 hover:text-white h-8 w-8 sm:h-10 sm:w-10"
+              >
+                <Bell className="w-4 sm:w-5 h-4 sm:h-5" />
+              </Button>
+            )}
           </PopoverTrigger>
           <PopoverContent className="w-80 bg-zinc-900 border-zinc-800 text-zinc-100 p-4 rounded-xl shadow-2xl z-50">
             <div className="flex justify-between items-center pb-2 border-b border-zinc-800/50 mb-3">

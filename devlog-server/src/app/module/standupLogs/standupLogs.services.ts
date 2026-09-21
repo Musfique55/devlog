@@ -83,18 +83,6 @@ const createLog = async (userId: string, payload: ICreateLogs) => {
         "You are blocked. Please contact support.",
         status.FORBIDDEN,
       );
-    } else {
-      if (user.lastLogDate && !payload.workspaceId) {
-        if (
-          new Date(user.lastLogDate).toDateString() ===
-          new Date().toDateString()
-        ) {
-          throw new AppError(
-            "You have already logged today",
-            status.BAD_REQUEST,
-          );
-        }
-      }
     }
 
     if (payload.workspaceId) {
@@ -122,14 +110,6 @@ const createLog = async (userId: string, payload: ICreateLogs) => {
           "You are not a member of this workspace",
           status.FORBIDDEN,
         );
-      }
-
-      if (
-        member.lastLogDate &&
-        new Date(member.lastLogDate).toDateString() ===
-          new Date().toDateString()
-      ) {
-        throw new AppError("You have already logged today", status.BAD_REQUEST);
       }
     }
 
@@ -168,7 +148,7 @@ const createLog = async (userId: string, payload: ICreateLogs) => {
 
     if (result.blocker && result.workspaceId) {
       await notificationService.createNotification({
-        type: notificationType.BLOCKER_UPDATED,
+        type: notificationType.BLOCKER_CREATED,
         message: `${result.user.name} has added a new blocker`,
         workspaceId: result.workspaceId,
       });
@@ -592,7 +572,7 @@ const updateBlockerStatus = async (
     });
 
     await notificationService.createNotification({
-      type: notificationType.BLOCKER_UPDATED,
+      type: notificationType.BLOCKER_RESOLVED,
       message: `${user.name} has resolved the blocker`,
       recipientId: log.userId,
       actorId: user.id,

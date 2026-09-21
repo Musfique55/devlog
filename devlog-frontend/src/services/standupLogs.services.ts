@@ -8,10 +8,10 @@ import fetchWithAuthServer from "@/lib/fetchWithAuth";
 export interface Log {
   id: string;
   workspaceId: string | null;
-  user : {
-    id : string,
-    name : string,
-    image : string | null
+  user: {
+    id: string;
+    name: string;
+    image: string | null;
   };
   todayWork: string;
   tomorrowWork: string;
@@ -26,15 +26,13 @@ export interface Log {
 }
 
 interface LogPayload {
-  todayWork : string
-  tomorrowWork : string
-  blocker? : string
-  projectTags : string[]
+  todayWork: string;
+  tomorrowWork: string;
+  blocker?: string;
+  projectTags: string[];
 }
 
-
 export const createLog = async (payload: LogPayload) => {
-
   const data = Object.fromEntries(
     Object.entries(payload).filter(([_, value]) => value !== ""),
   );
@@ -47,15 +45,6 @@ export const createLog = async (payload: LogPayload) => {
       },
       body: JSON.stringify(data),
     });
-
-
-    if (!res.ok) {
-      return {
-        success: false,
-        message: res.statusText,
-        data: null,
-      };
-    }
 
     const result = await res!.json();
 
@@ -83,9 +72,7 @@ export const createLog = async (payload: LogPayload) => {
   }
 };
 
-export const getMyLogs = async (
-  query: Record<string, string>,
-) => {
+export const getMyLogs = async (query: Record<string, string>) => {
   try {
     const url = new URL(`${envVars.API_URL}/logs`);
     url.search = new URLSearchParams(query).toString();
@@ -165,7 +152,6 @@ export const deleteLog = async (id: string) => {
 };
 
 export const updateLog = async (id: string, payload: Partial<StandupData>) => {
-
   try {
     const res = await fetchWithAuthServer(`${envVars.API_URL}/logs/${id}`, {
       method: "PATCH",
@@ -209,7 +195,9 @@ export const updateLog = async (id: string, payload: Partial<StandupData>) => {
   }
 };
 
-export const getWorkspaceLogs = async (workspaceId: string) : Promise<WorkspaceLogResponse<Log>> => {
+export const getWorkspaceLogs = async (
+  workspaceId: string,
+): Promise<WorkspaceLogResponse<Log>> => {
   try {
     const url = new URL(`${envVars.API_URL}/logs/workspaces/${workspaceId}`);
     const res = await fetchWithAuthServer(`${url}`);
