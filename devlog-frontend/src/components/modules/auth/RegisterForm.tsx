@@ -11,7 +11,6 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getNewRefreshToken } from "@/services/auth.services";
 
 export function RegisterForm({ inviteToken }: { inviteToken?: string }) {
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -37,14 +36,13 @@ export function RegisterForm({ inviteToken }: { inviteToken?: string }) {
           setServerError(result.error as string);
           return;
         }
-        await getNewRefreshToken();
         toast.success("Account Created Successfully");
         form.reset();
         setServerError(null);
-        // router.push(`/auth/verify-email-notice?email=${value.email}`)
+        router.push(`/auth/verify-email-notice?email=${encodeURIComponent(value.email)}`);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
-        setServerError(error.message!);
+        setServerError(error.message || "An unexpected error occurred");
       }
     },
   });

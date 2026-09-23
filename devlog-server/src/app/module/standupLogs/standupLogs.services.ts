@@ -2,6 +2,7 @@ import status from "http-status";
 import {
   APP_ROLE,
   BlockerStatus,
+  notificationType,
   Prisma,
   TEAM_ROLE,
 } from "../../../generated/prisma/client";
@@ -10,10 +11,10 @@ import AppError from "../../helper/AppError";
 import { IQueryParams } from "../../types/queryBuilder.types";
 import { QueryBuilder } from "../../utils/queryBuilder";
 import { sendEmail } from "../../utils/sendEmail";
-import { ICreateLogs, IUpdateLogs } from "./standupLogs.types";
+import { ICreateLogs, IResolveBlocker, IUpdateLogs } from "./standupLogs.types";
 import { IRequestUser } from "../../middleware/checkAuth";
 import { envVars } from "../../config/env";
-import { getIo } from "../../utils/socket";
+import { notificationService } from "../notification/notification.services";
 
 const updateStreak = async (userId: string) => {
   try {
@@ -82,18 +83,6 @@ const createLog = async (userId: string, payload: ICreateLogs) => {
         "You are blocked. Please contact support.",
         status.FORBIDDEN,
       );
-    } else {
-      if (user.lastLogDate && !payload.workspaceId) {
-        if (
-          new Date(user.lastLogDate).toDateString() ===
-          new Date().toDateString()
-        ) {
-          throw new AppError(
-            "You have already logged today",
-            status.BAD_REQUEST,
-          );
-        }
-      }
     }
 
     if (payload.workspaceId) {
@@ -121,14 +110,6 @@ const createLog = async (userId: string, payload: ICreateLogs) => {
           "You are not a member of this workspace",
           status.FORBIDDEN,
         );
-      }
-
-      if (
-        member.lastLogDate &&
-        new Date(member.lastLogDate).toDateString() ===
-          new Date().toDateString()
-      ) {
-        throw new AppError("You have already logged today", status.BAD_REQUEST);
       }
     }
 
@@ -166,12 +147,11 @@ const createLog = async (userId: string, payload: ICreateLogs) => {
     });
 
     if (result.blocker && result.workspaceId) {
-      const io = getIo();
-      io.to(result.workspaceId).emit("New_Blocker", {
-        message: "New blocker received",
-        success: true,
-        data: `${result.user.name} has added a new blocker`,
-        userId: result.userId,
+      await notificationService.createNotification({
+        type: notificationType.BLOCKER_CREATED,
+        message: `${result.user.name} has added a new blocker`,
+        workspaceId: result.workspaceId,
+        recipientId: user.id,
       });
     }
 
@@ -493,6 +473,9 @@ const getLogsByWorkspaceId = async (
             },
           },
         },
+        orderBy: {
+          createdAt: "desc",
+        },
       }),
       prisma.standupLogs.count({
         where: {
@@ -553,7 +536,11 @@ const getAllBlockerLogs = async (
   }
 };
 
-const updateBlockerStatus = async (logId: string, admin: IRequestUser) => {
+const updateBlockerStatus = async (
+  logId: string,
+  user: IRequestUser,
+  payload: IResolveBlocker,
+) => {
   try {
     const log = await prisma.standupLogs.findUnique({
       where: {
@@ -578,8 +565,9 @@ const updateBlockerStatus = async (logId: string, admin: IRequestUser) => {
       },
       data: {
         blockerStatus: BlockerStatus.RESOLVED,
-        blockerResolvedBy: admin.id,
+        blockerResolvedBy: user.id,
         blockerResolvedAt: new Date(),
+        ...(payload?.comment && { resolverComment: payload.comment }),
       },
       include: {
         user: true,
@@ -587,20 +575,26 @@ const updateBlockerStatus = async (logId: string, admin: IRequestUser) => {
       },
     });
 
-    // await sendEmail({
-    //   subject: "Blocker Resolved",
-    //   to: log.user.id,
-    //   templateName: "blocker-resolved",
-    //   templateData: {
-    //     date: new Date().toLocaleDateString(),
-    //     memberName: data.user.name,
-    //     blocker: data.blocker,
-    //     adminName: admin.name,
-    //     workspaceName: data.workSpace!.name,
-    //     resolvedAt: data.blockerResolvedAt?.toLocaleDateString(),
-    //     dashboardUrl: `${envVars.FRONTEND_URL}/dashboard`,
-    //   },
-    // });
+    await notificationService.createNotification({
+      type: notificationType.BLOCKER_RESOLVED,
+      message: `${user.name} has resolved the blocker`,
+      recipientId: data.user.id,
+      actorId: user.id,
+    });
+    await sendEmail({
+      subject: "Blocker Resolved",
+      to: data.user.email,
+      templateName: "blocker-resolved",
+      templateData: {
+        date: new Date().toLocaleDateString(),
+        memberName: data.user.name,
+        blocker: data.blocker,
+        adminName: user.name,
+        workspaceName: data.workSpace!.name,
+        resolvedAt: data.blockerResolvedAt?.toLocaleDateString(),
+        dashboardUrl: `${envVars.FRONTEND_URL}/dashboard`,
+      },
+    });
   } catch (error) {
     throw error;
   }

@@ -1,10 +1,10 @@
 import status from "http-status";
 import { prisma } from "../../../lib/prisma";
 import AppError from "../../helper/AppError";
-import { InviteStatus } from "../../../generated/prisma/enums";
 import { envVars } from "../../config/env";
-import { WorkspaceMember } from "../../../generated/prisma/client";
+import { WorkspaceMember,InviteStatus, PLAN } from "../../../generated/prisma/client";
 import { sendEmail } from "../../utils/sendEmail";
+import redis from "../../config/redis";
 
 interface AcceptInviteResult {
   redirect: string | null;
@@ -58,23 +58,53 @@ const acceptInvite = async (token: string): Promise<AcceptInviteResult> => {
 
       return member;
     });
+
+    await redis.sadd(`notifications:${result.userId}:workspace`,result.workspaceId);
     return { redirect: null, data: result };
   } catch (error) {
     throw error;
   }
 };
 
-const updateExpiredTokens = async () => {
-  // expired users
+const EXPIRY_REMINDER_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-  const expiredUsers = await prisma.user.findMany({
+const updateExpiredTokens = async () => {
+  const now = new Date();
+
+  // mark expired pending invites
+  await prisma.invite.updateMany({
     where: {
       expiresAt: {
-        lt: new Date(),
+        lt: now,
       },
+      status: InviteStatus.PENDING,
     },
-    include: {
-      workspaces: true,
+    data: {
+      status: InviteStatus.EXPIRED,
+    },
+  });
+
+  // expired pro users who are due for a monthly expiry reminder
+  const expiredUsers = await prisma.user.findMany({
+    where: {
+      plan: PLAN.PRO,
+      isDeleted: false,
+      expiresAt: {
+        lt: now,
+      },
+      OR: [
+        { lastExpiryReminderAt: null },
+        {
+          lastExpiryReminderAt: {
+            lt: new Date(now.getTime() - EXPIRY_REMINDER_INTERVAL_MS),
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
     },
   });
 
@@ -82,22 +112,11 @@ const updateExpiredTokens = async () => {
     return;
   }
 
-  await prisma.invite.updateMany({
-    where: {
-      expiresAt: {
-        lt: new Date(),
-      },
-    },
-    data: {
-      status: InviteStatus.EXPIRED,
-    },
-  });
-
-  for(const user of expiredUsers){
+  for (const user of expiredUsers) {
     await sendEmail({
       subject: "Subscription Expired",
       templateData: {
-        name : user.name,
+        name: user.name,
         upgradeUrl: `${envVars.FRONTEND_URL}/upgrade-plan`,
       },
       templateName: "subscription-expired",
@@ -105,6 +124,17 @@ const updateExpiredTokens = async () => {
     });
   }
 
+  // stamp so the next reminder only goes out after the 30-day interval
+  await prisma.user.updateMany({
+    where: {
+      id: {
+        in: expiredUsers.map((user) => user.id),
+      },
+    },
+    data: {
+      lastExpiryReminderAt: now,
+    },
+  });
 };
 
 export const inviteServices = {

@@ -1,0 +1,26 @@
+model Notification {
+    id          String           @id @default(uuid())
+    recipientId String?
+    actorId     String?
+    workspaceId String?
+    type        notificationType
+    message     String
+    read        Boolean          @default(false)
+    createdAt   DateTime         @default(now())
+
+    user      User?      @relation(fields: [recipientId], references: [id])
+    workspace Workspace? @relation(fields: [workspaceId], references: [id])
+
+    @@index([recipientId, workspaceId])
+    @@map("notification")
+}
+
+enum notificationType {
+    ANNOUNCEMENT
+    BLOCKER_RESOLVED
+    BLOCKER_CREATED
+    SUBSCRIPTION_PAYMENT_SUCCESS
+    SUBSCRIPTION_PAYMENT_FAILED
+    SUBSCRIPTION_EXPIRED
+    WELCOME
+}

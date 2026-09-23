@@ -49,7 +49,7 @@ const ActivityWrapper = ({ id }: { id: string }) => {
           <div className="space-y-4 sm:space-y-6">
             {activityLogs && activityLogs?.data && activityLogs?.data.length > 0
               ? activityLogs.data.map((log) => (
-                  <ActivityCard key={log.id} log={log} />
+                  <ActivityCard key={log.id} log={log} workspaceId={id} />
                 ))
               : "No feed items found."}
           </div>

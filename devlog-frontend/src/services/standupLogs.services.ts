@@ -8,10 +8,10 @@ import fetchWithAuthServer from "@/lib/fetchWithAuth";
 export interface Log {
   id: string;
   workspaceId: string | null;
-  user : {
-    id : string,
-    name : string,
-    image : string | null
+  user: {
+    id: string;
+    name: string;
+    image: string | null;
   };
   todayWork: string;
   tomorrowWork: string;
@@ -20,21 +20,25 @@ export interface Log {
   blockerStatus: string;
   blockerResolvedAt: string | null;
   blockerResolvedBy: string | null;
+  blockerComment?: string | null;
+  resolver?: {
+    id: string;
+    name: string;
+    image?: string | null;
+  } | null;
   projectTags: string[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 interface LogPayload {
-  todayWork : string
-  tomorrowWork : string
-  blocker? : string
-  projectTags : string[]
+  todayWork: string;
+  tomorrowWork: string;
+  blocker?: string;
+  projectTags: string[];
 }
 
-
 export const createLog = async (payload: LogPayload) => {
-
   const data = Object.fromEntries(
     Object.entries(payload).filter(([_, value]) => value !== ""),
   );
@@ -47,15 +51,6 @@ export const createLog = async (payload: LogPayload) => {
       },
       body: JSON.stringify(data),
     });
-
-
-    if (!res.ok) {
-      return {
-        success: false,
-        message: res.statusText,
-        data: null,
-      };
-    }
 
     const result = await res!.json();
 
@@ -83,9 +78,7 @@ export const createLog = async (payload: LogPayload) => {
   }
 };
 
-export const getMyLogs = async (
-  query: Record<string, string>,
-) => {
+export const getMyLogs = async (query: Record<string, string>) => {
   try {
     const url = new URL(`${envVars.API_URL}/logs`);
     url.search = new URLSearchParams(query).toString();
@@ -165,7 +158,6 @@ export const deleteLog = async (id: string) => {
 };
 
 export const updateLog = async (id: string, payload: Partial<StandupData>) => {
-
   try {
     const res = await fetchWithAuthServer(`${envVars.API_URL}/logs/${id}`, {
       method: "PATCH",
@@ -209,7 +201,9 @@ export const updateLog = async (id: string, payload: Partial<StandupData>) => {
   }
 };
 
-export const getWorkspaceLogs = async (workspaceId: string) : Promise<WorkspaceLogResponse<Log>> => {
+export const getWorkspaceLogs = async (
+  workspaceId: string,
+): Promise<WorkspaceLogResponse<Log>> => {
   try {
     const url = new URL(`${envVars.API_URL}/logs/workspaces/${workspaceId}`);
     const res = await fetchWithAuthServer(`${url}`);
@@ -236,6 +230,69 @@ export const getWorkspaceLogs = async (workspaceId: string) : Promise<WorkspaceL
       data: result.data,
       meta: result.meta,
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    console.log(error);
+    return {
+      success: false,
+      message: error.message || "Something went wrong",
+      data: null,
+    };
+  }
+};
+
+export const resolveBlocker = async (
+  workspaceId: string,
+  blockerId: string,
+  payload: { blockerComment?: string; comment?: string },
+) => {
+  try {
+    const commentValue = payload.blockerComment ?? payload.comment ?? "";
+    const res = await fetchWithAuthServer(
+      `${envVars.API_URL}/logs/workspaces/${workspaceId}/blocker/${blockerId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          blockerStatus: "RESOLVED",
+          blockerComment: commentValue,
+          comment: commentValue,
+        }),
+      },
+    );
+
+    if (res && !res.ok) {
+      const fallbackRes = await fetchWithAuthServer(
+        `${envVars.API_URL}/workspaces/${workspaceId}/blocker/${blockerId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            blockerStatus: "RESOLVED",
+            blockerComment: commentValue,
+            comment: commentValue,
+          }),
+        },
+      );
+
+      if (fallbackRes && !fallbackRes.ok) {
+        return {
+          success: false,
+          message: fallbackRes.statusText,
+          data: null,
+        };
+      }
+
+      const fallbackResult = await fallbackRes!.json();
+      return fallbackResult;
+    }
+
+    const result = await res!.json();
+    return result;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.log(error);

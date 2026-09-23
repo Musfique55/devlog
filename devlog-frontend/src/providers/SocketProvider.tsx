@@ -1,5 +1,6 @@
 "use client";
 
+import { getAccessToken } from "@/services/auth.services";
 import { useAuth } from "@/hooks/useAuth";
 import React, {
   createContext,
@@ -10,28 +11,39 @@ import React, {
 } from "react";
 import io, { Socket } from "socket.io-client";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getNotifications } from "@/services/workspace.services";
 
 export interface NotificationItem {
   id: string;
   message: string;
-  timestamp: Date;
   read: boolean;
+  workspaceId?: string;
+  type: string;
+  recipientId?: string;
+  actorId?: string;
+  createdAt: string | Date;
+  timestamp?: string | Date;
 }
 
 interface SocketContextType {
   socket: Socket | null;
   notifications: NotificationItem[];
   unreadCount: number;
-  clearNotifications: () => void;
   markAllAsRead: () => void;
+  clearNotifications: () => void;
+  newNotifications: boolean;
+  setNewNotifications: (value: boolean) => void;
 }
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   notifications: [],
   unreadCount: 0,
-  clearNotifications: () => {},
   markAllAsRead: () => {},
+  clearNotifications: () => {},
+  newNotifications: false,
+  setNewNotifications: () => {},
 });
 
 export const useSocket = () => useContext(SocketContext);
@@ -42,72 +54,98 @@ export default function SocketProvider({
   children: React.ReactNode;
 }) {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const { data: user } = useAuth();
+  const [newNotifications, setNewNotifications] = useState<boolean>(false);
+  const queryClient = useQueryClient();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["notifications", user?.id],
+    queryFn: async (): Promise<NotificationItem[]> => {
+      const res = await getNotifications();
+      return res.data || [];
+    },
+    enabled: !!user?.id,
+  });
 
-  const clearNotifications = () => setNotifications([]);
+  const unreadCount = notifications?.filter((n) => !n.read)?.length || 0;
 
   const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNewNotifications(false);
+  };
+
+  const clearNotifications = () => {
+    setNewNotifications(false);
+    queryClient.setQueryData(["notifications", userRef.current?.id], []);
   };
 
   const userRef = useRef(user);
-  // 3. Keep the ref updated with the latest user object on every render
+  // Keep the ref updated with the latest user object on every render
   useEffect(() => {
     userRef.current = user;
   }, [user]);
 
   useEffect(() => {
-    // Derive the socket URL (e.g. http://localhost:5000) from the API URL
-    const publicApiUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
-    const socketUrl = publicApiUrl.split("/api/v1")[0];
+    let socketInstance: Socket | null = null;
 
-    const socketInstance = io(socketUrl, {
-      withCredentials: true,
-      transports: ["websocket", "polling"],
-    });
+    const initSocket = async () => {
+      const publicApiUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+      const socketUrl = publicApiUrl.split("/api/v1")[0];
 
-    socketInstance.on("connect", () => {});
+      const token = await getAccessToken();
+      socketInstance = io(socketUrl, {
+        auth: {
+          token: token ? `Bearer ${token}` : "",
+        },
+        withCredentials: true,
+        transports: ["websocket", "polling"],
+      });
 
-    socketInstance.on("connect_error", (error) => {
-      console.error("Socket connection error:", error.message);
-    });
-
-    // Listen to real-time blocker warnings inside joined workspace rooms
-    socketInstance.on(
-      "New_Blocker",
-      (data: {
-        message: string;
-        data: string;
-        success: boolean;
-        userId: string;
-      }) => {
-        if (data.userId !== userRef.current?.id) {
-          const text = data.data || data.message || "New Blocker Alert!";
-          toast.warning(text);
-
-          setNotifications((prev) => [
-            {
-              id: Math.random().toString(36).substring(2, 9),
-              message: text,
-              timestamp: new Date(),
-              read: false,
-            },
-            ...prev,
-          ]);
+      // Listen to real-time notifications
+      socketInstance.on("notification", (data: NotificationItem) => {
+        if (
+          data.type === "BLOCKER_CREATED" &&
+          data.recipientId === userRef.current?.id
+        ) {
+          return;
+        } else if (
+          data.type === "BLOCKER_RESOLVED" &&
+          data.actorId === userRef.current?.id
+        ) {
+          return;
         }
-      },
-    );
+        const newNotification: NotificationItem = {
+          ...data,
+          timestamp: data.timestamp || data.createdAt || new Date(),
+          createdAt: data.createdAt || data.timestamp || new Date(),
+        };
+        setNewNotifications(true);
 
-    setSocket(socketInstance);
+        queryClient.setQueryData<NotificationItem[]>(
+          ["notifications", userRef.current?.id],
+          (oldData) => {
+            if (!oldData) return [newNotification];
+            // Prevent merging the same data twice
+            if (oldData.some((n) => n.id === newNotification.id)) {
+              return oldData;
+            }
+            return [newNotification, ...oldData];
+          },
+        );
+        toast.info(newNotification.message);
+      });
+
+      setSocket(socketInstance);
+    };
+
+    initSocket();
 
     return () => {
-      socketInstance.disconnect();
+      if (socketInstance) {
+        socketInstance.disconnect();
+      }
     };
-  }, []);
+  }, [queryClient]);
 
   return (
     <SocketContext.Provider
@@ -115,8 +153,10 @@ export default function SocketProvider({
         socket,
         notifications,
         unreadCount,
-        clearNotifications,
         markAllAsRead,
+        clearNotifications,
+        newNotifications,
+        setNewNotifications,
       }}
     >
       {children}

@@ -6,7 +6,6 @@ import { bearer, oAuthProxy } from "better-auth/plugins";
 import { sendEmail } from "../app/utils/sendEmail";
 import { APP_ROLE, InviteStatus, PLAN } from "../generated/prisma/enums";
 import { envVars } from "../app/config/env";
-import { tokenUtils } from "../app/utils/token";
 
 
 export const auth = betterAuth({
@@ -45,27 +44,6 @@ export const auth = betterAuth({
         },
       });
     },
-    // async afterEmailVerification(user,request) {
-    //   const thisUser = await prisma.user.findUniqueOrThrow({
-    //     where: {
-    //       email: user.email,
-    //     },
-    //   });
-
-    //   const payloadForToken = {
-    //     userId: thisUser.id,
-    //     email: thisUser.email,
-    //     role: thisUser.role,
-    //     plan: thisUser.plan,
-    //     isBlocked: thisUser.isBlocked,
-    //     emailVerified: thisUser.emailVerified,
-    //   };
-
-    //   const accessToken = tokenUtils.createAccessToken(payloadForToken);
-    //   const refreshToken = tokenUtils.createRefreshToken(payloadForToken);
-      
-    //   request?.headers.set("Authorization", `Bearer ${accessToken}`);
-    // }
       
   },
   user: {

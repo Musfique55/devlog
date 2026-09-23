@@ -37,9 +37,12 @@ export function StandupForm({
   const { mutateAsync, isPending } = useMutation({
     mutationFn: createLog,
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["my-dashboard-info", "activityLogs"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["my-dashboard-info"] });
+      queryClient.invalidateQueries({ queryKey: ["activityLogs"] });
+      queryClient.invalidateQueries({ queryKey: ["logs"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-stats"] });
     },
   });
 

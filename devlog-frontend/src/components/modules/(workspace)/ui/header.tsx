@@ -3,7 +3,7 @@
 import UserProfilePopover from "@/components/shared/user-profile-popover";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import {  Bell, HelpCircle } from "lucide-react";
+import { Bell, HelpCircle } from "lucide-react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 
@@ -51,7 +51,6 @@ export function WorkspaceHeader() {
               <div className="w-8 h-8 rounded-xl object-cover hover:grayscale-0 transition-all duration-300 bg-amber-800 flex items-center justify-center text-white font-bold text-2xl">
                 <p>{user?.name[0]}</p>
               </div>
-  
             </UserProfilePopover>
           )}
 

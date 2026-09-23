@@ -1,17 +1,18 @@
-
-
 export interface ICreateLogs {
-    todayWork : string;
-    tomorrowWork : string;
-    blocker? : string;
-    projectTags? : string[];
-    workspaceId? : string;
-    blockerUrl? : string[];
+  todayWork: string;
+  tomorrowWork: string;
+  blocker?: string;
+  projectTags?: string[];
+  workspaceId?: string;
+  blockerUrl?: string[];
 }
 export interface IUpdateLogs {
-    todayWork : string;
-    tomorrowWork : string;
-    blocker? : string;
-    projectTags? : string[];
+  todayWork: string;
+  tomorrowWork: string;
+  blocker?: string;
+  projectTags?: string[];
 }
 
+export interface IResolveBlocker {
+  comment?: string;
+}

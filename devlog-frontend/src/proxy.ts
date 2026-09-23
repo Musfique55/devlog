@@ -121,6 +121,8 @@ export async function proxy(request: NextRequest) {
       }
     }
 
+    
+
     // free user catch
     if (user?.plan === "FREE" && proUserRoutes.includes(pathname)) {
       return NextResponse.redirect(new URL("/pricing", request.url));
