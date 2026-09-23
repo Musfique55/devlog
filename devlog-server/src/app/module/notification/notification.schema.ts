@@ -10,9 +10,7 @@ export const createNotificationDTO = z
     actorId: z.string().nullable().optional(),
   })
   .superRefine((data, ctx) => {
-    if (
-      data.type === notificationType.ANNOUNCEMENT
-    ) {
+    if (data.type === notificationType.ANNOUNCEMENT) {
       if (!data.workspaceId) {
         ctx.addIssue({
           code: "custom",

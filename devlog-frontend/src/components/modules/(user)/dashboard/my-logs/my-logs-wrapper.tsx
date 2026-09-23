@@ -77,9 +77,10 @@ export default function MyLogsWrapper() {
         toast.error(data.message);
         return;
       }
-      queryClient.invalidateQueries({
-        queryKey: ["logs", sortBy, debouncedSearchQuery, currentPage, limit],
-      });
+      queryClient.invalidateQueries({ queryKey: ["logs"] });
+      queryClient.invalidateQueries({ queryKey: ["activityLogs"] });
+      queryClient.invalidateQueries({ queryKey: ["my-dashboard-info"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-logs"] });
       toast.success(data.message);
       return data;
     },
@@ -95,9 +96,10 @@ export default function MyLogsWrapper() {
         toast.error(data.message);
         return;
       }
-      queryClient.invalidateQueries({
-        queryKey: ["logs", sortBy, debouncedSearchQuery, currentPage, limit],
-      });
+      queryClient.invalidateQueries({ queryKey: ["logs"] });
+      queryClient.invalidateQueries({ queryKey: ["activityLogs"] });
+      queryClient.invalidateQueries({ queryKey: ["my-dashboard-info"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-logs"] });
       toast.success(data.message);
       return data;
     },

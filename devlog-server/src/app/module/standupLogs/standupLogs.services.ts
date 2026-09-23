@@ -151,6 +151,7 @@ const createLog = async (userId: string, payload: ICreateLogs) => {
         type: notificationType.BLOCKER_CREATED,
         message: `${result.user.name} has added a new blocker`,
         workspaceId: result.workspaceId,
+        recipientId: user.id,
       });
     }
 
@@ -472,6 +473,9 @@ const getLogsByWorkspaceId = async (
             },
           },
         },
+        orderBy: {
+          createdAt: "desc",
+        },
       }),
       prisma.standupLogs.count({
         where: {
@@ -574,12 +578,12 @@ const updateBlockerStatus = async (
     await notificationService.createNotification({
       type: notificationType.BLOCKER_RESOLVED,
       message: `${user.name} has resolved the blocker`,
-      recipientId: log.userId,
+      recipientId: data.user.id,
       actorId: user.id,
     });
     await sendEmail({
       subject: "Blocker Resolved",
-      to: log.user.id,
+      to: data.user.email,
       templateName: "blocker-resolved",
       templateData: {
         date: new Date().toLocaleDateString(),

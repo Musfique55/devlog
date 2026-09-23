@@ -6,9 +6,7 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/bauth/authClient";
-import { useRouter } from "next/navigation";
 import { logout } from "@/services/auth.services";
-
 
 const BouncingDots = () => {
   return (
@@ -30,27 +28,34 @@ const BouncingDots = () => {
 };
 
 export default function VerifyEmail({ token }: { token: string }) {
-  const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { isError, isLoading, isSuccess } = useQuery({
-    queryKey: ["verify-email"],
+  const { isError, isLoading, isSuccess, error } = useQuery({
+    queryKey: ["verify-email", token],
     queryFn: async () => {
+      if (!token) {
+        throw new Error("Missing verification token");
+      }
+
       const res = await authClient.verifyEmail({
         query: { token },
       });
 
-      if (!res.data?.status) {
-        throw new Error(res.error?.message);
+      if (res.error) {
+        throw new Error(res.error.message || "Verification failed");
       }
 
-      await logout();
+      if (res.data && "status" in res.data && res.data.status === false) {
+        throw new Error("Verification failed");
+      }
+
+      // await logout();
       await queryClient.invalidateQueries({
         queryKey: ["user"],
       });
-      router.push("/auth/login");
       return res.data;
     },
+    enabled: !!token,
     retry: false,
   });
 

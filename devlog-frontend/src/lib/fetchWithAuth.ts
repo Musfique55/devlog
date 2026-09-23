@@ -15,7 +15,6 @@ export const getCookieHeader = async () => {
 };
 const fetchWithAuthServer = async (url: string, options: RequestInit = {}) => {
   const cookieHeader = await getCookieHeader();
-
   let res = await fetch(url, {
     ...options,
     headers: {

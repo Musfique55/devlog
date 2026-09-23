@@ -20,6 +20,12 @@ export interface Log {
   blockerStatus: string;
   blockerResolvedAt: string | null;
   blockerResolvedBy: string | null;
+  blockerComment?: string | null;
+  resolver?: {
+    id: string;
+    name: string;
+    image?: string | null;
+  } | null;
   projectTags: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -224,6 +230,69 @@ export const getWorkspaceLogs = async (
       data: result.data,
       meta: result.meta,
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    console.log(error);
+    return {
+      success: false,
+      message: error.message || "Something went wrong",
+      data: null,
+    };
+  }
+};
+
+export const resolveBlocker = async (
+  workspaceId: string,
+  blockerId: string,
+  payload: { blockerComment?: string; comment?: string },
+) => {
+  try {
+    const commentValue = payload.blockerComment ?? payload.comment ?? "";
+    const res = await fetchWithAuthServer(
+      `${envVars.API_URL}/logs/workspaces/${workspaceId}/blocker/${blockerId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          blockerStatus: "RESOLVED",
+          blockerComment: commentValue,
+          comment: commentValue,
+        }),
+      },
+    );
+
+    if (res && !res.ok) {
+      const fallbackRes = await fetchWithAuthServer(
+        `${envVars.API_URL}/workspaces/${workspaceId}/blocker/${blockerId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            blockerStatus: "RESOLVED",
+            blockerComment: commentValue,
+            comment: commentValue,
+          }),
+        },
+      );
+
+      if (fallbackRes && !fallbackRes.ok) {
+        return {
+          success: false,
+          message: fallbackRes.statusText,
+          data: null,
+        };
+      }
+
+      const fallbackResult = await fallbackRes!.json();
+      return fallbackResult;
+    }
+
+    const result = await res!.json();
+    return result;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.log(error);

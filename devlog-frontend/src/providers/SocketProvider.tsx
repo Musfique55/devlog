@@ -11,7 +11,7 @@ import React, {
 } from "react";
 import io, { Socket } from "socket.io-client";
 import { toast } from "sonner";
-import { QueryClient, useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getNotifications } from "@/services/workspace.services";
 
 export interface NotificationItem {
@@ -22,8 +22,8 @@ export interface NotificationItem {
   type: string;
   recipientId?: string;
   actorId?: string;
-  createdAt: Date;
-  timestamp : Date;
+  createdAt: string | Date;
+  timestamp?: string | Date;
 }
 
 interface SocketContextType {
@@ -31,6 +31,7 @@ interface SocketContextType {
   notifications: NotificationItem[];
   unreadCount: number;
   markAllAsRead: () => void;
+  clearNotifications: () => void;
   newNotifications: boolean;
   setNewNotifications: (value: boolean) => void;
 }
@@ -40,6 +41,7 @@ const SocketContext = createContext<SocketContextType>({
   notifications: [],
   unreadCount: 0,
   markAllAsRead: () => {},
+  clearNotifications: () => {},
   newNotifications: false,
   setNewNotifications: () => {},
 });
@@ -54,24 +56,26 @@ export default function SocketProvider({
   const [socket, setSocket] = useState<Socket | null>(null);
   const { data: user } = useAuth();
   const [newNotifications, setNewNotifications] = useState<boolean>(false);
-  const queryClient = new QueryClient();
-  const { data : notifications = [], isPending } = useQuery({
-    queryKey: ["notifications",user?.id],
+  const queryClient = useQueryClient();
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["notifications", user?.id],
     queryFn: async (): Promise<NotificationItem[]> => {
       const res = await getNotifications();
-      return res.data;
+      return res.data || [];
     },
+    enabled: !!user?.id,
   });
-
-  // console.log(notifications);
 
   const unreadCount = notifications?.filter((n) => !n.read)?.length || 0;
 
-  // const clearNotifications = () => setNotifications([]);
-
   const markAllAsRead = () => {
     setNewNotifications(false);
-    // setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const clearNotifications = () => {
+    setNewNotifications(false);
+    queryClient.setQueryData(["notifications", userRef.current?.id], []);
   };
 
   const userRef = useRef(user);
@@ -99,15 +103,35 @@ export default function SocketProvider({
 
       // Listen to real-time notifications
       socketInstance.on("notification", (data: NotificationItem) => {
+        if (
+          data.type === "BLOCKER_CREATED" &&
+          data.recipientId === userRef.current?.id
+        ) {
+          return;
+        } else if (
+          data.type === "BLOCKER_RESOLVED" &&
+          data.actorId === userRef.current?.id
+        ) {
+          return;
+        }
         const newNotification: NotificationItem = {
           ...data,
-          timestamp : data.createdAt
-        }
+          timestamp: data.timestamp || data.createdAt || new Date(),
+          createdAt: data.createdAt || data.timestamp || new Date(),
+        };
         setNewNotifications(true);
-        queryClient.setQueryData(["notifications",user?.id], (oldData : NotificationItem[]) =>{
-          console.log(oldData);
-          return [newNotification,...(oldData ?? [])];
-        } );
+
+        queryClient.setQueryData<NotificationItem[]>(
+          ["notifications", userRef.current?.id],
+          (oldData) => {
+            if (!oldData) return [newNotification];
+            // Prevent merging the same data twice
+            if (oldData.some((n) => n.id === newNotification.id)) {
+              return oldData;
+            }
+            return [newNotification, ...oldData];
+          },
+        );
         toast.info(newNotification.message);
       });
 
@@ -121,7 +145,7 @@ export default function SocketProvider({
         socketInstance.disconnect();
       }
     };
-  }, []);
+  }, [queryClient]);
 
   return (
     <SocketContext.Provider
@@ -129,8 +153,8 @@ export default function SocketProvider({
         socket,
         notifications,
         unreadCount,
-        // clearNotifications,
         markAllAsRead,
+        clearNotifications,
         newNotifications,
         setNewNotifications,
       }}

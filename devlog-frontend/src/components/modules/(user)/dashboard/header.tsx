@@ -30,6 +30,16 @@ export function Header({ title = "Dashboard" }: HeaderProps) {
   const { notifications, markAllAsRead, clearNotifications, newNotifications } =
     useSocket();
 
+  const formatNotificationTime = (dateInput?: string | Date) => {
+    if (!dateInput) return "Just now";
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return "Just now";
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return (
     <header className="fixed top-0 right-0 w-full lg:w-[calc(100%-16rem)] h-16 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/20 flex justify-between items-center px-4 md:px-8 z-40 transition-all duration-300">
       {/* Left Section */}
@@ -97,10 +107,7 @@ export function Header({ title = "Dashboard" }: HeaderProps) {
                       {n.message}
                     </p>
                     <span className="text-[10px] text-zinc-500 font-semibold self-end">
-                      {new Date(n.timestamp).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatNotificationTime(n.timestamp || n.createdAt)}
                     </span>
                   </div>
                 ))

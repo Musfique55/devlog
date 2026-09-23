@@ -1,3 +1,4 @@
+import { notificationType } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import redis from "../../config/redis";
 import AppError from "../../helper/AppError";
@@ -10,7 +11,7 @@ const createNotification = async (data: CreateNotificationDTO) => {
     ...data,
     workspaceId: data.workspaceId ?? null,
     actorId: data.actorId ?? null,
-    recipientId: data.recipientId ?? null,
+    recipientId: data.recipientId,
   };
 
   try {
@@ -48,7 +49,9 @@ const getNotifications = async (user: IRequestUser) => {
     // pipelining query for multiple keys
     const pipeline = redis.pipeline();
     const p_key = `notifications:${user.id}`;
-    const workspaceIds = await redis.smembers(`notifications:${user.id}:workspace`);
+    const workspaceIds = await redis.smembers(
+      `notifications:${user.id}:workspace`,
+    );
     for (const id of workspaceIds) {
       pipeline.lrange(`workspace:notifications:${id}`, 0, 19);
     }
@@ -57,31 +60,38 @@ const getNotifications = async (user: IRequestUser) => {
     const cachedNotifications = await pipeline.exec();
     // pipeline finished
 
-    const allCachedNotifications = cachedNotifications?.flatMap(([err,result]) => {
-      if(err || !result) return [];
-      return (result as string []).map((n) => JSON.parse(n));
-    }).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // user who is creating notification shouldnt get the notification and user who is resolving blocker known as actorId should not get the notification
+    const allCachedNotifications = cachedNotifications
+      ?.flatMap(([err, result]) => {
+        if (err || !result) return [];
+        return (result as string[]).map((n) => JSON.parse(n));
+      })
+      .filter((n: any) => {
+        if (n.workspaceId) {
+          if (n.recipientId === user.id && n.actorId === user.id) {
+            return false;
+          }
+          return true;
+        } else {
+          return n.recipientId === user.id;
+        }
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
+      .slice(0, 10);
 
-    if(allCachedNotifications?.length){
+    if (allCachedNotifications?.length) {
       return allCachedNotifications;
     }
-    
+
     const notifications = await prisma.notification.findMany({
       where: {
-        OR: [
-          {
-            recipientId : user.id,
-          },
-          {
-            workspace: {
-              members: {
-                some: {
-                  userId: user.id,
-                },
-              },
-            },
-          },
-        ],
+        recipientId: user.id,
+        type: {
+          not: notificationType.BLOCKER_CREATED,
+        },
       },
       take: 10,
       orderBy: {
@@ -89,10 +99,10 @@ const getNotifications = async (user: IRequestUser) => {
       },
     });
 
-    for(const notification of notifications){
+    for (const notification of notifications) {
       await redis.lpush(p_key, JSON.stringify(notification));
     }
-    
+
     return notifications;
   } catch (error) {
     console.error("Error fetching notifications:", error);

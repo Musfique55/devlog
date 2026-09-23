@@ -37,7 +37,7 @@ router.get(
 router.patch(
   "/workspaces/:workspaceId/blocker/:id",
   checkAuth(APP_ROLE.USER),
-  teamAuth(TEAM_ROLE.MEMBER),
+  teamAuth(TEAM_ROLE.ADMIN, TEAM_ROLE.MEMBER),
   StandupLogController.updateBlockerStatus,
 );
 
