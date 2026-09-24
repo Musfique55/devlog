@@ -1,15 +1,17 @@
 "use client"
 
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="py-12 sm:py-20 bg-secondary/5 border-t border-border px-4 sm:px-0" id="about">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 md:gap-12 mb-12 sm:mb-20">
           <div className="col-span-2 sm:col-span-1">
-            <a className="text-lg sm:text-xl font-extrabold tracking-tighter mb-4 sm:mb-6 block" href="#home">
+            <Link className="text-lg sm:text-xl font-extrabold tracking-tighter mb-4 sm:mb-6 block" href="/#home">
               <span className="text-foreground">Dev</span>
               <span className="text-primary">Log</span>
-            </a>
+            </Link>
             <p className="text-xs sm:text-sm text-muted-foreground">
               The high-definition workspace for developers.
             </p>
@@ -18,19 +20,19 @@ export function Footer() {
             <h4 className="font-bold mb-3 sm:mb-4 text-sm sm:text-base text-foreground">Product</h4>
             <ul className="flex flex-col gap-2 sm:gap-3">
               <li>
-                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="#features">
+                <Link className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="/#features">
                   Features
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="#pricing">
+                <Link className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="/#pricing">
                   Pricing
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="#">
-                  Integrations
-                </a>
+                <Link className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="https://github.com/Musfique55/devlog-frontend#readme" target="_blank" rel="noreferrer">
+                  README
+                </Link>
               </li>
             </ul>
           </div>
@@ -38,18 +40,18 @@ export function Footer() {
             <h4 className="font-bold mb-3 sm:mb-4 text-sm sm:text-base text-foreground">Resources</h4>
             <ul className="flex flex-col gap-2 sm:gap-3">
               <li>
-                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="#">
-                  Documentation
+                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="https://github.com/Musfique55/devlog-frontend" target="_blank" rel="noreferrer">
+                  GitHub
                 </a>
               </li>
               <li>
-                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="#">
-                  Blog
+                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="https://github.com/Musfique55/devlog-backend" target="_blank" rel="noreferrer">
+                  Backend
                 </a>
               </li>
               <li>
-                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="#">
-                  Status
+                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="https://devlog-frontend-two.vercel.app" target="_blank" rel="noreferrer">
+                  Site
                 </a>
               </li>
             </ul>
@@ -58,19 +60,19 @@ export function Footer() {
             <h4 className="font-bold mb-3 sm:mb-4 text-sm sm:text-base text-foreground">Legal</h4>
             <ul className="flex flex-col gap-2 sm:gap-3">
               <li>
-                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="#">
+                <Link className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="https://github.com/Musfique55/devlog-frontend/blob/main/README.md" target="_blank" rel="noreferrer">
                   Privacy
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="#">
+                <Link className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="https://github.com/Musfique55/devlog-frontend/blob/main/README.md" target="_blank" rel="noreferrer">
                   Terms
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="#">
+                <Link className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" href="https://github.com/Musfique55/devlog-frontend/blob/main/README.md" target="_blank" rel="noreferrer">
                   Security
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -80,14 +82,14 @@ export function Footer() {
             © {new Date().getFullYear()} DevLog Systems Inc. All rights reserved.
           </p>
           <div className="flex gap-4 sm:gap-6 order-1 md:order-2">
-            <a className="text-xs text-muted-foreground hover:text-foreground transition-colors" href="#">
-              Twitter
+            <a className="text-xs text-muted-foreground hover:text-foreground transition-colors" href="https://www.linkedin.com" target="_blank" rel="noreferrer">
+              LinkedIn
             </a>
-            <a className="text-xs text-muted-foreground hover:text-foreground transition-colors" href="#">
+            <a className="text-xs text-muted-foreground hover:text-foreground transition-colors" href="https://github.com/Musfique55/devlog-frontend" target="_blank" rel="noreferrer">
               GitHub
             </a>
-            <a className="text-xs text-muted-foreground hover:text-foreground transition-colors" href="#">
-              Discord
+            <a className="text-xs text-muted-foreground hover:text-foreground transition-colors" href="https://github.com/Musfique55/devlog-frontend#readme" target="_blank" rel="noreferrer">
+              README
             </a>
           </div>
         </div>

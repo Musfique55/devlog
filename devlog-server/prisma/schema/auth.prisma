@@ -1,46 +1,40 @@
 model User {
-  id               String   @id
-  name             String
-  email            String
-  emailVerified    Boolean  @default(false)
-  image            String?
-  role             APP_ROLE @default(USER)
-  plan             PLAN     @default(FREE)
-  stripeCustomerId String?  @unique
-
-  lastLogDate   DateTime?
-  currentStreak Int       @default(0)
-  longestStreak Int       @default(0)
-
-  isDeleted Boolean   @default(false)
-  deletedAt DateTime?
-
-  isBlocked     Boolean   @default(false)
-  blockedReason String?
-  blockedAt     DateTime?
-
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id                   String            @id
+  name                 String
+  email                String            @unique
+  emailVerified        Boolean           @default(false)
+  image                String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  plan                 PLAN              @default(FREE)
+  role                 APP_ROLE          @default(USER)
+  blockedAt            DateTime?
+  blockedReason        String?
+  currentStreak        Int               @default(0)
+  isBlocked            Boolean           @default(false)
+  lastLogDate          DateTime?
+  longestStreak        Int               @default(0)
+  deletedAt            DateTime?
+  isDeleted            Boolean           @default(false)
   expiresAt            DateTime?
+  stripeCustomerId     String?           @unique
   lastExpiryReminderAt DateTime?
+  accounts             Account[]
+  notifications        Notification[]
+  payments             Payment[]
+  sessions             Session[]
+  standupLogs          StandupLogs[]
+  subscriptions        Subscription?
+  workspaces           Workspace[]
+  workspaceMembers     WorkspaceMember[]
 
-  sessions         Session[]
-  accounts         Account[]
-  workspaces       Workspace[]
-  workspaceMembers WorkspaceMember[]
-  standupLogs      StandupLogs[]
-  payments         Payment[]
-  subscriptions    Subscription[]
-  notifications     Notification[]
-
-  @@unique([email])
   @@map("user")
 }
 
 model Session {
   id        String   @id
   expiresAt DateTime
-  token     String
+  token     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
@@ -48,7 +42,6 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([token])
   @@index([userId])
   @@map("session")
 }
@@ -58,7 +51,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -68,6 +60,7 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("account")

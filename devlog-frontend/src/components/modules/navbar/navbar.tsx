@@ -7,10 +7,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
- function Navigation() {
+function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const  {data : user} = useAuth();
+  const { data: user } = useAuth();
   const router = useRouter();
 
   const handleGetStarted = () => {
@@ -47,39 +47,41 @@ import { useState } from "react";
             >
               Pricing
             </Link>
-            <Link
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              href="/#about"
-            >
-              About
-            </Link>
           </div>
           <div className="flex items-center gap-4">
-            {user? (
+            {user ? (
+              <Link
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                href="/dashboard"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <Link
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                href="/auth/login"
+              >
+                Login
+              </Link>
+            )}
             <Link
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              href="/dashboard"
-            >
-              Dashboard
-            </Link>
-          ) : (
-            <Link
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               href="/auth/login"
+              className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
+              onClick={() => setIsOpen(false)}
             >
-              Login
+              <Button
+                className="w-full bg-linear-to-r from-primary to-primary/80 hover:opacity-90"
+                onClick={handleGetStarted}
+              >
+                Get Started Free
+              </Button>
             </Link>
-          )}
-          
-            <Button className="bg-gradient-to-r from-primary to-primary/80 hover:opacity-90" onClick={handleGetStarted}>
-              Get Started Free
-            </Button>
           </div>
         </div>
 
         {/* Mobile Menu Button */}
         <div className="md:hidden flex items-center gap-4">
-          {user  ? (
+          {user ? (
             <Link
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               href="/dashboard"
@@ -107,30 +109,32 @@ import { useState } from "react";
       {isOpen && (
         <div className="md:hidden border-t border-border bg-background">
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-3">
-            <a
-              href="#features"
+            <Link
+              href="/#features"
               className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
               onClick={() => setIsOpen(false)}
             >
               Features
-            </a>
-            <a
-              href="#pricing"
+            </Link>
+            <Link
+              href="/pricing"
               className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
               onClick={() => setIsOpen(false)}
             >
               Pricing
-            </a>
-            <a
-              href="#about"
+            </Link>
+            <Link
+              href="/auth/register"
               className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
               onClick={() => setIsOpen(false)}
             >
-              About
-            </a>
-            <Button className="w-full bg-gradient-to-r from-primary to-primary/80 hover:opacity-90" onClick={handleGetStarted}>
-              Get Started Free
-            </Button>
+              <Button
+                className="w-full bg-linear-to-r from-primary to-primary/80 hover:opacity-90"
+                onClick={handleGetStarted}
+              >
+                Get Started Free
+              </Button>
+            </Link>
           </div>
         </div>
       )}

@@ -1,39 +1,36 @@
 model Workspace {
-    id        String    @id @default(uuid())
-    name      String    @db.VarChar(20)
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
-    deletedAt DateTime?
-    isDeleted Boolean   @default(false)
-    isActive  Boolean   @default(true)
+  id            String            @id @default(uuid())
+  name          String            @db.VarChar(20)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  deletedAt     DateTime?
+  adminId       String
+  isDeleted     Boolean           @default(false)
+  isActive      Boolean           @default(true)
+  invites       Invite[]
+  notifications Notification[]
+  logs          StandupLogs[]
+  admin         User              @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  members       WorkspaceMember[]
 
-    adminId String
-    admin   User              @relation(fields: [adminId], references: [id], onDelete: Cascade)
-    members WorkspaceMember[]
-    invites Invite[]
-    logs    StandupLogs[]
-    notifications Notification[]
-
-    @@index([adminId])
-    @@map("workspace")
+  @@index([adminId])
+  @@map("workspace")
 }
 
 model WorkspaceMember {
-    id          String    @id @default(uuid())
-    workspaceId String
-    userId      String
-    role        TEAM_ROLE @default(MEMBER)
-    createdAt   DateTime  @default(now())
-    updatedAt   DateTime  @updatedAt
-    joinedAt    DateTime  @default(now())
-    deletedAt   DateTime?
-    lastLogDate DateTime?
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        TEAM_ROLE @default(MEMBER)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  joinedAt    DateTime  @default(now())
+  deletedAt   DateTime?
+  lastLogDate DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-
-    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@unique([workspaceId, userId])
-    @@index([userId])
-    @@map("workspace_member")
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_member")
 }
