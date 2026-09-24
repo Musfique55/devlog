@@ -56,18 +56,18 @@ export function HeroSection() {
             </div>
 
             {/* Social proof stats */}
-            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border/30">
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 pt-8 border-t border-border/30">
               <div>
-                <p className="text-4xl sm:text-5xl font-bold text-foreground leading-none">5K+</p>
-                <p className="mt-2 text-sm sm:text-[0.95rem] text-[#B4B4C0] font-light">Active Teams</p>
+                <p className="text-[1.7rem] sm:text-4xl md:text-5xl font-bold text-foreground leading-none">5K+</p>
+                <p className="mt-2 text-[0.68rem] sm:text-sm md:text-[0.95rem] text-[#B4B4C0] font-light">Active Teams</p>
               </div>
               <div>
-                <p className="text-4xl sm:text-5xl font-bold text-foreground leading-none">99.9%</p>
-                <p className="mt-2 text-sm sm:text-[0.95rem] text-[#B4B4C0] font-light">Uptime</p>
+                <p className="text-[1.7rem] sm:text-4xl md:text-5xl font-bold text-foreground leading-none">99.9%</p>
+                <p className="mt-2 text-[0.68rem] sm:text-sm md:text-[0.95rem] text-[#B4B4C0] font-light">Uptime</p>
               </div>
               <div>
-                <p className="text-4xl sm:text-5xl font-bold text-foreground leading-none">4.9★</p>
-                <p className="mt-2 text-sm sm:text-[0.95rem] text-[#B4B4C0] font-light">User Rating</p>
+                <p className="text-[1.7rem] sm:text-4xl md:text-5xl font-bold text-foreground leading-none">4.9★</p>
+                <p className="mt-2 text-[0.68rem] sm:text-sm md:text-[0.95rem] text-[#B4B4C0] font-light">User Rating</p>
               </div>
             </div>
           </div>
