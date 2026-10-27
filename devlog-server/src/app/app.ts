@@ -57,6 +57,14 @@ cron.schedule("0 0 * * *", async () => {
   await inviteServices.updateExpiredTokens();
 });
 
+cron.schedule("*/5 * * * *",async() => {
+  try {
+    await fetch("https://devlog-sxig.onrender.com/health");
+  } catch (error) {
+    console.error("Error occurred while pinging the server:", error);
+  }
+})
+
 app.get("/health", async (req, res) => {
   res.status(200).json({
     message: "ok",
