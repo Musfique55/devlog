@@ -1,5 +1,10 @@
 # DevLog Frontend — Developer Daily Standup Tracker
 > A SaaS frontend that replaces daily standup meetings with a simple 3-question daily log. Developers stay accountable, team leads get visibility — no meetings needed.
+
+## Admin Login Info
+### ADMIN_EMAIL : superadmin@gmail.com
+### ADMIN_PASSWORD : admin123
+
 ---
 ## 📌 Table of Contents
 - [Overview](#overview)
